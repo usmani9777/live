@@ -12,7 +12,7 @@ st.set_page_config(
     page_title="Live Transcription",
     page_icon="🎤",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
 # --- CONFIG ---

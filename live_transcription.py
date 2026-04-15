@@ -79,8 +79,11 @@ async def websocket_live_transcribe(websocket: WebSocket):
     speaker_map: dict[str, str] = {}
     connected = True
 
+    FLUSH_DELAY = 1.5  # seconds of silence before flushing a segment
+
     state = {"last_sm_speaker": "S1"}
     speaker_buffers: dict[str, list[str]] = {}
+    flush_timers: dict[str, asyncio.TimerHandle] = {}
 
     def map_speaker(sm_label: str) -> str:
         if sm_label not in speaker_map:
@@ -105,6 +108,24 @@ async def websocket_live_transcribe(websocket: WebSocket):
         asyncio.create_task(
             send_safe({"type": "final", "text": text, "speaker": speaker_label, "source": "mic"})
         )
+
+    def _cancel_flush_timer(speaker_label: str):
+        handle = flush_timers.pop(speaker_label, None)
+        if handle:
+            handle.cancel()
+
+    def _schedule_flush(speaker_label: str):
+        """Reset the silence timer; flush only after FLUSH_DELAY seconds of no new words."""
+        _cancel_flush_timer(speaker_label)
+        loop = asyncio.get_event_loop()
+        flush_timers[speaker_label] = loop.call_later(
+            FLUSH_DELAY,
+            lambda: asyncio.ensure_future(_async_flush(speaker_label)),
+        )
+
+    async def _async_flush(speaker_label: str):
+        flush_timers.pop(speaker_label, None)
+        flush(speaker_label)
 
     # --- SPEECHMATICS EVENT HANDLERS ---
     def on_partial(msg):
@@ -151,20 +172,19 @@ async def websocket_live_transcribe(websocket: WebSocket):
                 buf = speaker_buffers.get(speaker_label)
                 if buf:
                     buf[-1] += content
-                    if content in (".", "?", "!"):
-                        flush(speaker_label)
                 continue
 
             state["last_sm_speaker"] = sm_speaker
 
-            # Flush any other speaker who was mid-sentence
+            # Speaker change: immediately flush the outgoing speaker
             for other in list(speaker_buffers.keys()):
                 if other != speaker_label:
+                    _cancel_flush_timer(other)
                     flush(other)
 
             speaker_buffers.setdefault(speaker_label, []).append(content)
-            if content[-1:] in (".", "?", "!"):
-                flush(speaker_label)
+            # Reset silence timer on every new confirmed word
+            _schedule_flush(speaker_label)
 
     # --- CORE LOOPS ---
     async def receive_loop():
