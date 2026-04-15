@@ -43,7 +43,11 @@ app.add_middleware(
 
 # 2. --- HELPER CLASSES ---
 class _QueueStream:
-    """Bridges asyncio.Queue to the Speechmatics async-iterator interface."""
+    """Bridges asyncio.Queue to the Speechmatics stream interface.
+
+    Implements both the async-iterator protocol and a ``read()`` method,
+    which is required by ``speechmatics.helpers.read_in_chunks``.
+    """
 
     def __init__(self, queue: asyncio.Queue):
         self.queue = queue
@@ -55,6 +59,13 @@ class _QueueStream:
         chunk = await self.queue.get()
         if chunk is None:
             raise StopAsyncIteration
+        return chunk
+
+    async def read(self, size: int = -1) -> bytes:
+        """Read the next chunk from the queue; returns b'' on end-of-stream."""
+        chunk = await self.queue.get()
+        if chunk is None:
+            return b""
         return chunk
 
 
