@@ -1,0 +1,8 @@
+# Backend
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+speechmatics-python>=1.8.0
+python-dotenv>=1.0.0
+
+# Frontend
+streamlit>=1.33.0
