@@ -27,8 +27,12 @@ if not SPEECHMATICS_API_KEY:
 SAMPLE_RATE = 16000
 _CHUNK_BYTES = 4096
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("live-transcription")
+# Silence noisy third-party loggers
+logging.getLogger("speechmatics").setLevel(logging.WARNING)
+logging.getLogger("websockets").setLevel(logging.WARNING)
+logging.getLogger("uvicorn").setLevel(logging.INFO)
 
 app = FastAPI(title="Live Transcription API")
 
@@ -165,7 +169,9 @@ async def websocket_live_transcribe(websocket: WebSocket):
                 continue
 
             content = alts[0].get("content", "")
-            sm_speaker = alts[0].get("speaker") or state["last_sm_speaker"]
+            raw_speaker = alts[0].get("speaker")
+            log.debug(f"[sm] word={content!r} raw_speaker={raw_speaker!r} type={rtype}")
+            sm_speaker = raw_speaker or state["last_sm_speaker"]
             speaker_label = map_speaker(sm_speaker)
 
             if rtype == "punctuation":
@@ -207,7 +213,7 @@ async def websocket_live_transcribe(websocket: WebSocket):
             operating_point="enhanced",
             diarization="speaker",
             enable_partials=True,
-            speaker_diarization_config=RTSpeakerDiarizationConfig(max_speakers=2),
+            speaker_diarization_config=RTSpeakerDiarizationConfig(max_speakers=10),
         )
 
         client = WebsocketClient(settings)
