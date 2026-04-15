@@ -15,7 +15,6 @@ from speechmatics.models import (
     RTSpeakerDiarizationConfig,
 )
 from speechmatics.client import WebsocketClient
-from speechmatics.helpers import ServerMessageType
 
 load_dotenv()
 
@@ -181,8 +180,8 @@ async def websocket_live_transcribe(websocket: WebSocket):
         )
 
         client = WebsocketClient(settings)
-        client.add_event_handler(ServerMessageType.AddPartialTranscript, on_partial)
-        client.add_event_handler(ServerMessageType.AddTranscript, on_transcript)
+        client.add_event_handler("AddPartialTranscript", on_partial)
+        client.add_event_handler("AddTranscript", on_transcript)
 
         try:
             await client.run(_QueueStream(audio_queue), config, audio_settings)
