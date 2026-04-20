@@ -25,7 +25,7 @@ if not SPEECHMATICS_API_KEY:
     raise RuntimeError("SPEECHMATICS_API_KEY environment variable is not set")
 
 SAMPLE_RATE = 16000
-_CHUNK_BYTES = 4096
+_CHUNK_BYTES = 2048
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("live-transcription")
@@ -213,7 +213,9 @@ async def websocket_live_transcribe(websocket: WebSocket):
             operating_point="enhanced",
             diarization="speaker",
             enable_partials=True,
-            speaker_diarization_config=RTSpeakerDiarizationConfig(max_speakers=10),
+            speaker_diarization_config=RTSpeakerDiarizationConfig(max_speakers=4),
+            speaker_sensitivity=0.3
+
         )
 
         client = WebsocketClient(settings)
