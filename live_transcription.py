@@ -215,7 +215,7 @@ async def websocket_live_transcribe(websocket: WebSocket):
             enable_partials=True,
             speaker_diarization_config=RTSpeakerDiarizationConfig(max_speakers=4),
             speaker_sensitivity=0.7,
-            prefer_current_speaker=True
+            # prefer_current_speaker=True
 
         )
 
